@@ -12,7 +12,7 @@
 #include <fstream>
 #include <sstream>
 #include <regex>
-
+#include <g711.h>
 #include "base64.hpp"
 #include "parser.hpp"
 #include "mod_audio_fork.h"
@@ -150,9 +150,6 @@ namespace {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "(%u) processIncomingMessage - unsupported msg type %s\n", tech_pvt->id, type.c_str());  
       }
       cJSON_Delete(json);
-    }
-    else {
-      switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "(%u) processIncomingMessage - could not parse message: %s\n", tech_pvt->id, message);
     }
   }
 
@@ -515,6 +512,22 @@ extern "C" {
     return SWITCH_STATUS_SUCCESS;
   }
 
+  switch_bool_t convert_linear2_g711_pcmu8k(char* frame, uint32_t* framelen) {
+        short *inbuf = (short *)frame;
+	uint32_t in_data_len = *framelen;
+	uint32_t outBufSize = in_data_len / sizeof(short);
+	unsigned char* obuf = (unsigned char*)  malloc(outBufSize);
+	uint32_t i;
+
+	for (i = 0; i < outBufSize; i++) {
+	    obuf[i] = linear_to_ulaw(inbuf[i]);
+	}
+        memcpy(frame, obuf, outBufSize);
+	*framelen = i;
+	free(obuf);
+    return SWITCH_TRUE;
+  }
+
   switch_bool_t fork_frame(switch_core_session_t *session, switch_media_bug_t *bug) {
     private_t* tech_pvt = (private_t*) switch_core_media_bug_get_user_data(bug);
     size_t inuse = 0;
@@ -559,8 +572,10 @@ extern "C" {
           switch_status_t rv = switch_core_media_bug_read(bug, &frame, SWITCH_TRUE);
           if (rv != SWITCH_STATUS_SUCCESS) break;
           if (frame.datalen) {
+            convert_linear2_g711_pcmu8k((char *)frame.data, &frame.datalen);
             pAudioPipe->binaryWritePtrAdd(frame.datalen);
             frame.buflen = available = pAudioPipe->binarySpaceAvailable();
+
             frame.data = pAudioPipe->binaryWritePtr();
             dirty = true;
           }
