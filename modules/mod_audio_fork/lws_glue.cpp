@@ -46,7 +46,7 @@ namespace {
           int validAudio = (jsonAudio && NULL != jsonAudio->valuestring);
 
           const char* szAudioContentType = cJSON_GetObjectCstr(jsonData, "audioContentType");
-          char fileType[6];
+          char fileType[8];
           int sampleRate = 16000;
           if (0 == strcmp(szAudioContentType, "raw")) {
             cJSON* jsonSR = cJSON_GetObjectItem(jsonData, "sampleRate");
@@ -54,7 +54,7 @@ namespace {
 
             switch(sampleRate) {
               case 8000:
-                strcpy(fileType, ".r8");
+                strcpy(fileType, ".r8.wav");
                 break;
               case 16000:
                 strcpy(fileType, ".r16");
